@@ -5,11 +5,13 @@ def load_datasets(args, train_x=None, valid_x=None, train_y=None, valid_y=None):
     train_dataset = Dataset(
         split='train',
         random_chunks=False,
+        seq_duration = args['dur'],
         x = train_x,
         y = train_y
     )
     valid_dataset = Dataset(
         split='valid',
+        seq_duration = args['dur'],
         x = valid_x,
         y = valid_y
     )
