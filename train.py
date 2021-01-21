@@ -1,5 +1,7 @@
 import os
 import torch
+import torch.optim as optim
+import torch.nn as nn
 import numpy as np
 
 import model
@@ -34,30 +36,31 @@ valid_sampler = torch.utils.data.DataLoader(
 )
 
 # Model
-m = model.TransformerModel(ntoken=args['dur'], ninp=200, nhead=2, nhid=200, nlayers=2, dropout=0.2)
-optimizer = torch.optim.Adam(
-    m.parameters(),
-    lr=args['lr'],
-    weight_decay=42
-)
+m = model.Net()
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.SGD(m.parameters(), lr=args['lr'], momentum=0.9)
 
 # Train / Valid funcs
-def train(args, m, device, train_sampler, optimizer):
-    #losses = utils.AverageMeter()
-    m.train()
+def train(args, m, device, train_sampler, optimizer, criterion):
 
-    for x, y in enumerate(train_sampler):
-        print(x.size())
-        print(y)
-        # x = x.to(device)
-        # y = y.to(device)
-        # optimizer.zero_grad()
-        # y_pred = model(x)
-        # loss = torch.nn.functional.mse_loss(y_pred, y)
-        # loss.backward()
-        # optimizer.step()
-        # losses.update(loss.item(), y.size(1))
-    return losses.avg
+    for x, y in train_sampler:
+        # zero the parameter gradients
+        optimizer.zero_grad()
+
+        # forward + backward + optimize
+        print("x:"+str(x.shape))
+        print("y:"+str(y.shape))
+        y_pred = m(x)
+        loss = criterion(y_pred, y)
+        loss.backward()
+        optimizer.step()
+
+        # print statistics
+        running_loss += loss.item()
+        if i % 2000 == 1999:    # print every 2000 mini-batches
+            print('[%d, %5d] loss: %.3f' %
+                  (epoch + 1, i + 1, running_loss / 2000))
+            running_loss = 0.0
 
 def valid(args, m, device, valid_sampler, writer, epoch):
     losses = utils.AverageMeter()
@@ -77,4 +80,4 @@ t = tqdm.trange(1, args['epochs'] + 1)
 for epoch in t:
     t.set_description("Training Epoch")
     end = time.time()
-    train_loss = train(args, m, args['device'], train_sampler, optimizer)
+    train_loss = train(args, m, args['device'], train_sampler, optimizer, criterion)

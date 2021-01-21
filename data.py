@@ -32,7 +32,7 @@ class Dataset(torch.utils.data.Dataset):
         self.random_chunks = random_chunks
         self.x = x
         self.y = y
-        self.seq_dur = seq_duration
+        self.shape = [300,300]
         self.x_len = self.x.shape[0]
 
         if self.x_len == 0:
@@ -40,16 +40,13 @@ class Dataset(torch.utils.data.Dataset):
 
     def __getitem__(self, index):
 
-        if self.random_chunks and self.seq_dur:
-            start = random.uniform(0, self.x_len - self.seq_dur)
-            end   = start + self.seq_dur
-        else:
-            start = 0
-            end   = self.x_len
+        start = 0
+        end   = (self.shape[0]*self.shape[1])
 
         x = self.x[index,start:end]
+        x = torch.reshape(x,(x.size()[0],self.shape[0],self.shape[1]))
         y = self.y[index,:]
-        # return torch tensors
+
         return x, y
 
     def __len__(self):
