@@ -1,17 +1,21 @@
 import torch
+import random
 
 def load_datasets(args, train_x=None, valid_x=None, train_y=None, valid_y=None): 
 
     train_dataset = Dataset(
         split='train',
         random_chunks=False,
-        seq_duration = args['dur'],
+        seq_duration = args['seq_dim'],
+        input_dim = args['input_dim'],
         x = train_x,
         y = train_y
     )
     valid_dataset = Dataset(
         split='valid',
-        seq_duration = args['dur'],
+        random_chunks=False,
+        seq_duration = args['seq_dim'],
+        input_dim = args['input_dim'],
         x = valid_x,
         y = valid_y
     )
@@ -24,6 +28,7 @@ class Dataset(torch.utils.data.Dataset):
         self,
         split='train',
         seq_duration=None,
+        input_dim = None,
         random_chunks=False,
         x = None,
         y = None,
@@ -32,7 +37,9 @@ class Dataset(torch.utils.data.Dataset):
         self.random_chunks = random_chunks
         self.x = x
         self.y = y
-        self.shape = [300,300]
+        self.seq_dur = seq_duration
+        self.input_dim = input_dim
+        self.shape = [seq_duration,input_dim]
         self.x_len = self.x.shape[0]
 
         if self.x_len == 0:
@@ -40,14 +47,13 @@ class Dataset(torch.utils.data.Dataset):
 
     def __getitem__(self, index):
 
-        start = 0
-        end   = (self.shape[0]*self.shape[1])
+        start = int(random.uniform(0, self.x.shape[-1] - self.seq_dur))
+        end   = int(start + self.seq_dur)
 
         x = self.x[index,start:end]
-        x = torch.reshape(x,(x.size()[0],self.shape[0],self.shape[1]))
         y = self.y[index,:]
 
-        return x, y
+        return x[:,None], y
 
     def __len__(self):
         return self.x.shape[0]

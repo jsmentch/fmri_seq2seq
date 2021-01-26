@@ -10,15 +10,20 @@ from sklearn.model_selection import train_test_split
 import tqdm
 import time
 
+
 args = {
-    "bs":16,
+    "bs":32,
     "root":"./data",
     "epochs":32,
     'device':'cpu',
     'lr':0.001,
-    'dur':1000
+    # Model param
+    'input_dim':1,   
+    'hidden_dim':256,
+    'layer_dim':3,
+    'output_dim':9,
+    'seq_dim':1024
 }
-
 
 # Data
 x = np.load(os.path.join(args['root'],'brain_train.npy'))
@@ -36,43 +41,42 @@ valid_sampler = torch.utils.data.DataLoader(
 )
 
 # Model
-m = model.Net()
+m = model.LSTMClassifier(args['input_dim'], args['hidden_dim'], args['layer_dim'], args['output_dim'], args)
+m.to(args['device'])
+m = m.float()
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(m.parameters(), lr=args['lr'], momentum=0.9)
 
 # Train / Valid funcs
 def train(args, m, device, train_sampler, optimizer, criterion):
 
-    for x, y in train_sampler:
+    pbar = tqdm.tqdm(train_sampler)
+    for x, y in pbar:
+        pbar.set_description("Training batch")
         # zero the parameter gradients
         optimizer.zero_grad()
 
+        x, y = x.to(args['device']), y.to(args['device'])
         # forward + backward + optimize
-        print("x:"+str(x.shape))
-        print("y:"+str(y.shape))
-        y_pred = m(x)
+        y_pred = m(x.float())
         loss = criterion(y_pred, y)
         loss.backward()
         optimizer.step()
 
         # print statistics
         running_loss += loss.item()
-        if i % 2000 == 1999:    # print every 2000 mini-batches
-            print('[%d, %5d] loss: %.3f' %
-                  (epoch + 1, i + 1, running_loss / 2000))
-            running_loss = 0.0
 
-def valid(args, m, device, valid_sampler, writer, epoch):
-    losses = utils.AverageMeter()
-    m.eval()
-    with torch.no_grad():
-        for x, y in enumerate(valid_sampler):
-            x = x.to(device)
-            y = y.to(device)
-            y_pred = model(x)
-            loss = torch.nn.functional.mse_loss(y_pred, y)
-            losses.update(loss.item(), y.size(1))
-        return losses.avg
+# # def valid(args, m, device, valid_sampler, writer, epoch):
+# #     losses = utils.AverageMeter()
+# #     m.eval()
+# #     with torch.no_grad():
+# #         for x, y in enumerate(valid_sampler):
+# #             x = x.to(device)
+# #             y = y.to(device)
+# #             y_pred = model(x)
+# #             loss = torch.nn.functional.mse_loss(y_pred, y)
+# #             losses.update(loss.item(), y.size(1))
+# #         return losses.avg
 
 
 # Training stage
